@@ -8,6 +8,7 @@ type SecurityEvent struct {
 	FileType       string
 	DepartmentPath string
 	EventType      string
+	EventUnixTime  int64
 	EventTime      string
 	DeviceName     string
 	FilePath       string

@@ -138,6 +138,7 @@ func (c *feilianClient) ListSecurityEvents(startTime, endTime int64) ([]*Securit
 				FileType:       item.(map[string]interface{})["file_info"].(map[string]interface{})["type"].(string),
 				DepartmentPath: item.(map[string]interface{})["user_info"].(map[string]interface{})["department_path"].(string),
 				EventType:      item.(map[string]interface{})["event_type"].(string),
+				EventUnixTime:  int64(item.(map[string]interface{})["event_unix_time"].(float64)),
 				EventTime:      time.Unix(int64(item.(map[string]interface{})["event_unix_time"].(float64)), 0).Format(time.DateTime),
 				DeviceName:     item.(map[string]interface{})["device_name"].(string),
 				FilePath:       item.(map[string]interface{})["file_info"].(map[string]interface{})["path"].(string),
