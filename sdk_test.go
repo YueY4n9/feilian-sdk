@@ -7,9 +7,9 @@ import (
 )
 
 func newClient() FeilianClient {
-	address := "https://192.168.200.217:8443"
-	appId := "rLpyGwqskHwSIZOWjgvA"
-	appKey := "LnrEJhgWqZwBVYAiOcXEpIHzzAljuDVTwhBHWvhf"
+	address := ""
+	appId := ""
+	appKey := ""
 	return NewClient(address, appId, appKey)
 }
 
