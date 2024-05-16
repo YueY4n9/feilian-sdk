@@ -292,3 +292,83 @@ func (c *feilianClient) ListUserIdsByRoleId(roleId string) ([]string, error) {
 	}
 	return res, nil
 }
+
+func (c *feilianClient) GetUserUidByMobile(mobile string) (string, error) {
+	url := fmt.Sprintf("%v/api/open/v1/user/get_id", c.Address)
+	payload := map[string]string{
+		"mobile": mobile,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Println("Error encoding JSON:", err)
+		return "", err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	token, err := c.GetToken()
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", token)
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error making request:", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+	fmt.Println("Response Status:", resp.Status)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return "", err
+	}
+	var bodyMap = make(map[string]interface{})
+	err = json.Unmarshal(body, &bodyMap)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return "", err
+	}
+	return bodyMap["data"].(map[string]interface{})["id"].(string), nil
+}
+
+// AddVpnPermission idType 1: dept 2: user 3:role
+func (c *feilianClient) AddVpnPermission(idType int, ids []string, days int) error {
+	url := fmt.Sprintf("%v/api/open/v1/vpn/permission/add", c.Address)
+	payload := map[string]interface{}{
+		"identity_type": idType, // 1: dept 2: user 3:role
+		"identity_ids":  ids,
+		"days":          days,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	token, err := c.GetToken()
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", token)
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Do(req)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer resp.Body.Close()
+	return nil
+}
