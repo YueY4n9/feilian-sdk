@@ -1,4 +1,4 @@
-module github.com/YueY4n9/lark-sdk
+module github.com/YueY4n9/feilian-sdk
 
 go 1.20
 
