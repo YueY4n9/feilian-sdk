@@ -1,0 +1,12 @@
+### common ###
+*~
+.#*
+*#
+*.old
+.idea
+.DS_Store
+.vimspector.json
+
+go.sum
+.vscode/
+data
