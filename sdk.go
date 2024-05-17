@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"github.com/pkg/errors"
-
 	"fmt"
-	"github.com/YueY4n9/gotools/echo"
 	"io"
 	"net/http"
+	"sync"
 	"time"
+
+	"github.com/YueY4n9/gotools/echo"
+	"github.com/pkg/errors"
 )
 
 type FeilianClient interface {
-	GetToken() (string, error)
+	GetToken() string
 	ListSecurityEvents(startTime, endTime int64) ([]*SecurityEvent, error)
 	ListSecurityFileUrl(fileType, eventId string) ([]string, error)
 	ListRoleIdsByRoleName(name string) ([]string, error)
@@ -25,6 +26,10 @@ type feilianClient struct {
 	Address   string
 	AppId     string
 	AppSecret string
+
+	mu     sync.Mutex
+	token  string
+	expiry time.Time
 }
 
 func NewClient(address, appId, appKey string) FeilianClient {
@@ -35,7 +40,23 @@ func NewClient(address, appId, appKey string) FeilianClient {
 	}
 }
 
-func (c *feilianClient) GetToken() (string, error) {
+// GetToken return client.token, if getToken return error, return ""
+func (c *feilianClient) GetToken() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if time.Now().After(c.expiry.Add(-30 * time.Minute)) { // 30 minutes buffer to avoid race conditions
+		newToken, err := c.getToken()
+		if err != nil {
+			return ""
+		}
+		c.token = newToken
+		c.expiry = time.Now().Add(2 * time.Hour)
+		return newToken
+	}
+	return c.token
+}
+
+func (c *feilianClient) getToken() (string, error) {
 	url := c.Address + "/api/open/v1/token"
 	payload := map[string]string{
 		"access_key_id":     c.AppId,
@@ -79,6 +100,7 @@ func (c *feilianClient) GetToken() (string, error) {
 	if tokenResp.Code != 0 {
 		return "", errors.New(tokenResp.Message)
 	}
+	echo.Json("refresh token")
 	return tokenResp.Data.AccessToken, nil
 }
 
@@ -96,11 +118,7 @@ func (c *feilianClient) ListSecurityEvents(startTime, endTime int64) ([]*Securit
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
-		token, err := c.GetToken() // TODO 优化逻辑
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Authorization", token)
+		req.Header.Set("Authorization", c.GetToken())
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
@@ -162,11 +180,7 @@ func (c *feilianClient) ListSecurityFileUrl(fileType, eventId string) ([]string,
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	token, err := c.GetToken()
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", token)
+	req.Header.Set("Authorization", c.GetToken())
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -208,11 +222,7 @@ func (c *feilianClient) ListRoleIdsByRoleName(name string) ([]string, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	token, err := c.GetToken()
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", token)
+	req.Header.Set("Authorization", c.GetToken())
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -257,11 +267,7 @@ func (c *feilianClient) ListUserIdsByRoleId(roleId string) ([]string, error) {
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
-		token, err := c.GetToken()
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Authorization", token)
+		req.Header.Set("Authorization", c.GetToken())
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
@@ -310,11 +316,7 @@ func (c *feilianClient) GetUserUidByMobile(mobile string) (string, error) {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	token, err := c.GetToken()
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Authorization", token)
+	req.Header.Set("Authorization", c.GetToken())
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -357,11 +359,7 @@ func (c *feilianClient) AddVpnPermission(idType int, ids []string, days int) err
 		return errors.WithStack(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	token, err := c.GetToken()
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", token)
+	req.Header.Set("Authorization", c.GetToken())
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
