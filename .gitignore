@@ -10,3 +10,5 @@
 go.sum
 .vscode/
 data
+
+sdk_test.go
