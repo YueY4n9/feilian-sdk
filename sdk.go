@@ -44,13 +44,13 @@ func NewClient(address, appId, appKey string) FeilianClient {
 func (c *feilianClient) GetToken() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if time.Now().After(c.expiry.Add(-30 * time.Minute)) { // 30 minutes buffer to avoid race conditions
+	if time.Now().After(c.expiry.Add(-3 * time.Minute)) { // 3 minutes buffer to avoid race conditions
 		newToken, err := c.getToken()
 		if err != nil {
 			return ""
 		}
 		c.token = newToken
-		c.expiry = time.Now().Add(2 * time.Hour)
+		c.expiry = time.Now().Add(30 * time.Minute)
 		return newToken
 	}
 	return c.token

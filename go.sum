@@ -1,4 +1,6 @@
 github.com/YueY4n9/gotools v0.0.6 h1:BcnZQE2ljus+KutsDLkcT4TY7RbKsoXcH9GvlkWJgyw=
 github.com/YueY4n9/gotools v0.0.6/go.mod h1:Vz4wngyLDZrggDZSHx82upe40Kl9QpxDQrYUbVAZECU=
+github.com/YueY4n9/gotools v0.0.7 h1:DYHWuS7nK1GnyVUX23uAmwL7O4HT5BmWw2Pn+wmd/hE=
+github.com/YueY4n9/gotools v0.0.7/go.mod h1:Vz4wngyLDZrggDZSHx82upe40Kl9QpxDQrYUbVAZECU=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
