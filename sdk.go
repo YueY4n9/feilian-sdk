@@ -20,6 +20,7 @@ type FeilianClient interface {
 	ListSecurityFileUrl(fileType, eventId string) ([]string, error)
 	ListRoleIdsByRoleName(name string) ([]string, error)
 	ListUserIdsByRoleId(roleId string) ([]string, error)
+	ListUserDevice(limit, offset int) (map[string]interface{}, error)
 }
 
 type feilianClient struct {
@@ -154,6 +155,8 @@ func (c *feilianClient) ListSecurityEvents(startTime, endTime int64) ([]*Securit
 				UserName:       item.(map[string]interface{})["user_info"].(map[string]interface{})["full_name"].(string),
 				FileName:       item.(map[string]interface{})["file_info"].(map[string]interface{})["name"].(string),
 				FileType:       item.(map[string]interface{})["file_info"].(map[string]interface{})["type"].(string),
+				FileMd5:        item.(map[string]interface{})["file_info"].(map[string]interface{})["md_5"].(string),
+				FileSize:       item.(map[string]interface{})["file_info"].(map[string]interface{})["size"].(float64),
 				DepartmentPath: item.(map[string]interface{})["user_info"].(map[string]interface{})["department_path"].(string),
 				EventType:      item.(map[string]interface{})["event_type"].(string),
 				EventUnixTime:  int64(item.(map[string]interface{})["event_unix_time"].(float64)),
@@ -370,4 +373,42 @@ func (c *feilianClient) AddVpnPermission(idType int, ids []string, days int) err
 	}
 	defer resp.Body.Close()
 	return nil
+}
+
+// ListUserDevice a
+func (c *feilianClient) ListUserDevice(limit, offset int) (map[string]interface{}, error) {
+	url := fmt.Sprintf("%v/api/open/v1/device/search?limit=%v&offset=%v", c.Address, limit, offset)
+	payload := map[string]interface{}{}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	req, err := http.NewRequest("GET", url, bytes.NewBuffer(data))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", c.GetToken())
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	defer resp.Body.Close()
+	fmt.Println("Response Status:", resp.Status)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return nil, err
+	}
+	var bodyMap = make(map[string]interface{})
+	err = json.Unmarshal(body, &bodyMap)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return nil, err
+	}
+	return bodyMap, nil
 }
