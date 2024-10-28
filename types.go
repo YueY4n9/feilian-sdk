@@ -6,6 +6,8 @@ type SecurityEvent struct {
 	UserName       string
 	FileName       string
 	FileType       string
+	FileMd5        string
+	FileSize       float64
 	DepartmentPath string
 	EventType      string
 	EventUnixTime  int64
@@ -14,4 +16,9 @@ type SecurityEvent struct {
 	FilePath       string
 	ActionDesc     string
 	StrategyName   string
+}
+
+type UserInfo struct {
+	DeviceName string
+	ClientIp   string
 }
