@@ -255,7 +255,7 @@ func (c *feilianClient) ListRolesByRoleName(name string) ([]RoleDetail, error) {
 		roleDetail := RoleDetail{
 			Id:          role.(map[string]interface{})["id"].(string),
 			Name:        role.(map[string]interface{})["name"].(string),
-			Mode:        role.(map[string]interface{})["mode"].(int),
+			Mode:        role.(map[string]interface{})["mode"].(float64),
 			Description: role.(map[string]interface{})["description"].(string),
 		}
 		userIds, err := c.ListUserIdsByRoleId(role.(map[string]interface{})["id"].(string))
