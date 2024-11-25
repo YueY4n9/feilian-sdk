@@ -16,6 +16,15 @@ type SecurityEvent struct {
 	FilePath       string
 	ActionDesc     string
 	StrategyName   string
+	LeakWay        string
+}
+
+type RoleDetail struct {
+	Id          string   `json:"id"`
+	Name        string   `json:"name"`
+	Mode        int      `json:"mode"`
+	Description string   `json:"description"`
+	UserIds     []string `json:"user_ids"` // 角色成员
 }
 
 type UserInfo struct {
