@@ -22,7 +22,7 @@ type SecurityEvent struct {
 type RoleDetail struct {
 	Id          string   `json:"id"`
 	Name        string   `json:"name"`
-	Mode        int      `json:"mode"`
+	Mode        float64  `json:"mode"`
 	Description string   `json:"description"`
 	UserIds     []string `json:"user_ids"` // 角色成员
 }
