@@ -18,6 +18,7 @@ type FeilianClient interface {
 	GetToken() string
 	ListSecurityEvents(startTime, endTime int64) ([]*SecurityEvent, error)
 	ListSecurityFileUrl(fileType, eventId string) ([]string, error)
+	ListRolesByRoleName(name string) ([]RoleDetail, error)
 	ListRoleIdsByRoleName(name string) ([]string, error)
 	ListUserIdsByRoleId(roleId string) ([]string, error)
 	ListUserDevice(limit, offset int) (map[string]interface{}, error)
@@ -213,7 +214,7 @@ func (c *feilianClient) ListSecurityFileUrl(fileType, eventId string) ([]string,
 	return res, nil
 }
 
-func (c *feilianClient) ListRoleIdsByRoleName(name string) ([]string, error) {
+func (c *feilianClient) ListRolesByRoleName(name string) ([]RoleDetail, error) {
 	url := fmt.Sprintf("%v/api/open/v1/role/list?query=%v", c.Address, name)
 	payload := map[string]interface{}{}
 	data, err := json.Marshal(payload)
@@ -249,11 +250,34 @@ func (c *feilianClient) ListRoleIdsByRoleName(name string) ([]string, error) {
 	}
 	roleList := bodyMap["data"].(map[string]interface{})["role_list"].([]interface{})
 	echo.Json(roleList)
-	res := make([]string, 0)
+	res := make([]RoleDetail, 0)
 	for _, role := range roleList {
-		res = append(res, role.(map[string]interface{})["id"].(string))
+		roleDetail := RoleDetail{
+			Id:          role.(map[string]interface{})["id"].(string),
+			Name:        role.(map[string]interface{})["name"].(string),
+			Mode:        role.(map[string]interface{})["mode"].(int),
+			Description: role.(map[string]interface{})["description"].(string),
+		}
+		userIds, err := c.ListUserIdsByRoleId(role.(map[string]interface{})["id"].(string))
+		if err != nil {
+			return nil, err
+		}
+		roleDetail.UserIds = userIds
+		res = append(res, roleDetail)
 	}
 	return res, nil
+}
+
+func (c *feilianClient) ListRoleIdsByRoleName(name string) ([]string, error) {
+	roleDetails, err := c.ListRolesByRoleName(name)
+	if err != nil {
+		return nil, err
+	}
+	roleIds := make([]string, 0)
+	for _, roleDetail := range roleDetails {
+		roleIds = append(roleIds, roleDetail.Id)
+	}
+	return roleIds, nil
 }
 
 func (c *feilianClient) ListUserIdsByRoleId(roleId string) ([]string, error) {
@@ -295,6 +319,7 @@ func (c *feilianClient) ListUserIdsByRoleId(roleId string) ([]string, error) {
 		count := bodyMap["data"].(map[string]interface{})["count"].(float64)
 		hasMore = count > float64(offset+limit)
 		items := bodyMap["data"].(map[string]interface{})["items"].([]interface{})
+		echo.Json(items)
 		for _, item := range items {
 			userId := item.(map[string]interface{})["user_id"].(string)
 			res = append(res, userId)
