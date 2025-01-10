@@ -281,7 +281,7 @@ func (c *feilianClient) ListRoleIdsByRoleName(name string) ([]string, error) {
 
 func (c *feilianClient) ListUserIdsByRoleId(roleId string) ([]string, error) {
 	res := make([]string, 0)
-	for hasMore, offset, limit := true, 0, 20; hasMore; offset += limit {
+	for hasMore, offset, limit := true, 0, 200; hasMore; offset += limit {
 		url := fmt.Sprintf("%v/api/open/v1/role/get?id=%v&limit=200&offset=%v", c.Address, roleId, offset)
 		payload := map[string]interface{}{}
 		data, err := json.Marshal(payload)
