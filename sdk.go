@@ -316,6 +316,9 @@ func (c *feilianClient) ListUserIdsByRoleId(roleId string) ([]string, error) {
 			return nil, nil
 		}
 		count := bodyMap["data"].(map[string]interface{})["count"].(float64)
+		if count == 0 {
+			return res, nil
+		}
 		hasMore = count > float64(offset+limit)
 		items := bodyMap["data"].(map[string]interface{})["items"].([]interface{})
 		echo.Json(items)
