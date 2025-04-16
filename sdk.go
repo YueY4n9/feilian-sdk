@@ -21,7 +21,9 @@ type FeilianClient interface {
 	ListRolesByRoleName(name string) ([]RoleDetail, error)
 	ListRoleIdsByRoleName(name string) ([]string, error)
 	ListUserIdsByRoleId(roleId string) ([]string, error)
+	ListIdMapByRoleId(roleId string) (map[string]string, error)
 	ListUserDevice(limit, offset int) (map[string]interface{}, error)
+	ListUserDeviceByUserId(userId string) (map[string]interface{}, error)
 }
 
 type feilianClient struct {
@@ -137,6 +139,7 @@ func (c *feilianClient) ListSecurityEvents(startTime, endTime int64) ([]*Securit
 		var bodyMap = make(map[string]interface{})
 		err = json.Unmarshal(body, &bodyMap)
 		if err != nil {
+			echo.Json(url)
 			return nil, err
 		}
 		echo.Json(bodyMap)
@@ -253,9 +256,9 @@ func (c *feilianClient) ListRolesByRoleName(name string) ([]RoleDetail, error) {
 	res := make([]RoleDetail, 0)
 	for _, role := range roleList {
 		roleDetail := RoleDetail{
-			Id:          role.(map[string]interface{})["id"].(string),
-			Name:        role.(map[string]interface{})["name"].(string),
-			Mode:        role.(map[string]interface{})["mode"].(float64),
+			Id:   role.(map[string]interface{})["id"].(string),
+			Name: role.(map[string]interface{})["name"].(string),
+			Mode: role.(map[string]interface{})["mode"].(float64),
 		}
 		userIds, err := c.ListUserIdsByRoleId(role.(map[string]interface{})["id"].(string))
 		if err != nil {
@@ -325,6 +328,61 @@ func (c *feilianClient) ListUserIdsByRoleId(roleId string) ([]string, error) {
 		for _, item := range items {
 			userId := item.(map[string]interface{})["user_id"].(string)
 			res = append(res, userId)
+		}
+	}
+	return res, nil
+}
+
+func (c *feilianClient) ListIdMapByRoleId(roleId string) (map[string]string, error) {
+	res := make(map[string]string)
+	for hasMore, offset, limit := true, 0, 200; hasMore; offset += limit {
+		url := fmt.Sprintf("%v/api/open/v1/role/get?id=%v&limit=200&offset=%v", c.Address, roleId, offset)
+		payload := map[string]interface{}{}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		req, err := http.NewRequest("GET", url, bytes.NewBuffer(data))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", c.GetToken())
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client := &http.Client{Transport: tr}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		var bodyMap = make(map[string]interface{})
+		err = json.Unmarshal(body, &bodyMap)
+		if err != nil {
+			return nil, err
+		}
+		if bodyMap["code"].(float64) != 0 || bodyMap["data"] == nil {
+			return nil, nil
+		}
+		count := bodyMap["data"].(map[string]interface{})["count"].(float64)
+		if count == 0 {
+			return res, nil
+		}
+		hasMore = count > float64(offset+limit)
+		items := bodyMap["data"].(map[string]interface{})["items"].([]interface{})
+		for _, item := range items {
+			userId := item.(map[string]interface{})["user_id"].(string)
+			if userId == "" {
+				continue
+			}
+			id := item.(map[string]interface{})["id"].(string)
+			//name := item.(map[string]interface{})["name"].(string)
+			res[userId] = id
 		}
 	}
 	return res, nil
@@ -405,6 +463,43 @@ func (c *feilianClient) AddVpnPermission(idType int, ids []string, days int) err
 // ListUserDevice a
 func (c *feilianClient) ListUserDevice(limit, offset int) (map[string]interface{}, error) {
 	url := fmt.Sprintf("%v/api/open/v1/device/search?limit=%v&offset=%v", c.Address, limit, offset)
+	payload := map[string]interface{}{}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	req, err := http.NewRequest("GET", url, bytes.NewBuffer(data))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", c.GetToken())
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	defer resp.Body.Close()
+	fmt.Println("Response Status:", resp.Status)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return nil, err
+	}
+	var bodyMap = make(map[string]interface{})
+	err = json.Unmarshal(body, &bodyMap)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return nil, err
+	}
+	return bodyMap, nil
+}
+
+func (c *feilianClient) ListUserDeviceByUserId(userId string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("%v/api/open/v1/user/device/list?user_id=%v", c.Address, userId)
 	payload := map[string]interface{}{}
 	data, err := json.Marshal(payload)
 	if err != nil {
